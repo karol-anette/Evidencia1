@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"os"
 	"sort"
 )
 
@@ -64,7 +66,9 @@ func sais(T []int) []int {
 			count[T[i]]++
 			revoffset := count[T[i]]
 			pos := buckets[T[i]][1] - revoffset
-			SA[pos] = i
+			if pos >= 0 && pos < len(T) { //Checamos que sea una posición válida
+				SA[pos] = i
+			}
 			if end != nil {
 				LMS[i] = *end
 			}
@@ -77,7 +81,7 @@ func sais(T []int) []int {
 	// Hacemos el sort para "L"
 	count = make(map[int]int)
 	for i := 0; i < len(T); i++ {
-		if SA[i] >= 0 && SA[i]-1 >= 0 && t[SA[i]-1] == 'L' {
+		if SA[i] > 0 && SA[i] < len(T) && SA[i]-1 >= 0 && t[SA[i]-1] == 'L' { //Posición válida
 			symbol := T[SA[i]-1]
 			offset := count[symbol]
 			pos := buckets[symbol][0] + offset
@@ -91,7 +95,7 @@ func sais(T []int) []int {
 	// Hacemos el sort para "S"
 	count = make(map[int]int)
 	for i := len(T) - 1; i > 0; i-- {
-		if SA[i] > 0 && t[SA[i]-1] == 'S' {
+		if SA[i] > 0 && SA[i] < len(T) && SA[i]-1 >= 0 && t[SA[i]-1] == 'S' { //Posiciones válidas en SA
 			symbol := T[SA[i]-1]
 			count[symbol]++
 			revoffset := count[symbol]
@@ -109,16 +113,20 @@ func sais(T []int) []int {
 	}
 	name := 0
 	var prev *int
-	for i := range T {
-		if SA[i] <= 0 {
+	for i := 0; i < len(T); i++ {
+		if SA[i] <= 0 || SA[i] >= len(T) {
 			continue
 		}
 		if _, ok := LMS[SA[i]]; !ok {
 			continue
 		}
-		if prev != nil {
-			previous := T[*prev:LMS[*prev]]
-			current := T[SA[i]:LMS[SA[i]]]
+		if prev != nil && *prev >= 0 && *prev < len(T) {
+			prevEnd, currEnd := LMS[*prev], LMS[SA[i]]
+			if prevEnd > len(T) || currEnd > len(T) {
+				continue
+			}
+			previous := T[*prev:prevEnd]
+			current := T[SA[i]:currEnd]
 			equal := len(previous) == len(current)
 			if equal {
 				for j := range previous {
@@ -146,7 +154,7 @@ func sais(T []int) []int {
 		}
 	}
 
-	if name < len(names)-1 {
+	if len(names) > 0 && name < len(names)-1 {
 		names = sais(names)
 	}
 
@@ -163,7 +171,13 @@ func sais(T []int) []int {
 	count = make(map[int]int)
 
 	for i := 0; i < len(names); i++ {
+		if names[i] < 0 || names[i] >= len(SApIdx) {
+			continue
+		}
 		pos := SApIdx[names[i]]
+		if pos < 0 || pos >= len(T) {
+			continue
+		}
 		count[T[pos]]++
 		revoffset := count[T[pos]]
 		idx := buckets[T[pos]][1] - revoffset
@@ -174,8 +188,8 @@ func sais(T []int) []int {
 
 	//Inducción para "L"
 	count = make(map[int]int)
-	for i := range T {
-		if SA[i] >= 0 && SA[i]-1 >= 0 && t[SA[i]-1] == 'L' {
+	for i := 0; i < len(T); i++ {
+		if SA[i] >= 0 && SA[i]-1 >= 0 && SA[i] < len(T) && SA[i]-1 >= 0 && t[SA[i]-1] == 'L' {
 			symbol := T[SA[i]-1]
 			offset := count[symbol]
 			pos := buckets[symbol][0] + offset
@@ -189,12 +203,12 @@ func sais(T []int) []int {
 	// Inducción para "S"
 	count = make(map[int]int)
 	for i := len(T) - 1; i > 0; i-- {
-		if SA[i] > 0 && t[SA[i]-1] == 'S' {
+		if SA[i] > 0 && SA[i] < len(T) && SA[i]-1 >= 0 && t[SA[i]-1] == 'S' {
 			symbol := T[SA[i]-1]
 			count[symbol]++
 			revoffset := count[symbol]
 			pos := buckets[symbol][1] - revoffset
-			if pos >= 0 {
+			if pos >= 0 && pos < len(T) {
 				SA[pos] = SA[i] - 1
 			}
 		}
@@ -205,10 +219,21 @@ func sais(T []int) []int {
 
 // Función main para poder leer el string
 func main() {
-	str := "GTCCCGATGTCATGTCAGGA$"
-	T := make([]int, len(str))
-	for i, c := range str {
-		T[i] = int(c)
+	file, err := os.Open("hamlet.txt") //Cambiamos string por el archivo.
+	if err != nil {
+		fmt.Println("No se puede abrir el archivo", err)
+		return
+	}
+	defer file.Close() //Avisa si no se puede abrir el archivo y lo cierra.
+
+	var T []int
+	reader := bufio.NewReader(file)
+	for {
+		r, _, err := reader.ReadRune() // ReadRune() lee caracter por caracter
+		if err != nil {
+			break
+		}
+		T = append(T, int(r))
 	}
 
 	SA := sais(T)

@@ -1,5 +1,6 @@
 import time
 import sys
+import tracemalloc #Herramienta que les permita perfilar el uso de memoria
 
 def getBuckets(T):
     count = {}
@@ -116,11 +117,17 @@ if __name__ == "__main__":
         text = f.read().strip() + "$" 
 
     T = [ord(c) for c in text]
+    
+    tracemalloc.start()
+    start_time = time.time()
 
-    start = time.time()
     SA = sais(T)
-    end = time.time()
 
-    print(f"Tiempo de ejecución: {end - start:.6f} segundos.")
-    print(f"Tamaño del archivo: {len(T)} caracteres")
+    end_time = time.time()
+    current, peak = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+
+    print(f"Tiempo de ejecución: {end_time - start_time:.6f} segundos.")
+    print(f"Uso máximo de memoria: {peak / 1024 / 1024:.2f} MB") #Le damos display a memory profiling.
+    print(f"Tamañoo: {len(T)} caracteres")
     print("Primeros 100 índices:", SA[:100])

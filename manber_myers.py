@@ -74,9 +74,54 @@ def build_fm_index(bwt):
     for i, char in enumerate(bwt):
         for c in chars:
             occ_table[c][i + 1] = occ_table[c][i] + (1 if bwt[i] == c else 0)
-    #cuántos caracteres son menores que cada char
+    #tabla para c, cuántos caracteres son menores que cada char
     total = 0
     for char in chars:
         c_table[char] = total
         total += occ_table[char][len(bwt)]
     return first_col, occ_table, c_table
+
+def fm_search(pattern, bwt, first_col, occ_table, c_table, suffix_array):
+    """Busca un patrón usando el FM-Index"""
+    if not pattern:
+        return []
+    
+    #"búsqueda hacia atrás en el FM-Index"
+    
+    top = 0
+    bottom = len(bwt) - 1
+    
+    for i in range(len(pattern) - 1, -1, -1):
+        char = pattern[i]
+        if char not in c_table:
+            return []
+        #qctualizar top y bottom usando LF-mapping
+        top = c_table[char] + occ_table[char][top]
+        bottom = c_table[char] + occ_table[char][bottom + 1] - 1
+        
+        if top > bottom:
+            return []
+    #Recuperar posiciones desde el arreglo de sufijos
+    
+    positions = []
+    for i in range(top, bottom + 1):
+        positions.append(suffix_array[i])
+    
+    return sorted(positions)
+
+def search_pattern_in_text(text, pattern, suffix_array):
+    """Función principal de búsqueda usando BWT y FM-Index"""
+    print(f"🔍 Buscando patrón: '{pattern}'")
+    print(f"📖 Texto de búsqueda ({len(text)} caracteres)")
+    
+    #construir BWT
+    
+    bwt = build_bwt(text + '$', suffix_array)
+    print(f" BWT construida: {bwt[:50]}...")
+    
+    #construir FM-Index
+    first_col, occ_table, c_table = build_fm_index(bwt)
+    print(" FM-Index construido")
+    
+    positions = fm_search(pattern, bwt, first_col, occ_table, c_table, suffix_array)
+    return positions

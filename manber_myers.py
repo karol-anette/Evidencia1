@@ -28,13 +28,18 @@ def suffix_array(T):
     while l < n:
         rank = make_ranks(substr_rank, n)
 
+        # CREAR NUEVA LISTA temporal en lugar de modificar los índices originales
+        new_substr_rank = []
         for i in range(n):
-            substr_rank[i].left_rank = rank[i]
-            substr_rank[i].right_rank = rank[i+l] if i+l < n else 0
-            substr_rank[i].index = i
-        l *= 2
-
+            new_substr_rank.append(SubstrRank(
+                rank[i], 
+                rank[i + l] if i + l < n else 0, 
+                i  # Mantener el índice actual
+            ))
+        
+        substr_rank = new_substr_rank
         substr_rank.sort(key=lambda sr: (sr.left_rank, sr.right_rank))
+        l *= 2
 
     SA = [substr_rank[i].index for i in range(n)]
 
@@ -42,3 +47,6 @@ def suffix_array(T):
 
 SA = suffix_array("mississippi")
 print(SA)
+expected = [10, 7, 4, 1, 0, 9, 8, 6, 3, 5, 2]
+print("Esperado: ", expected)
+print("¿Correcto?:", SA == expected)

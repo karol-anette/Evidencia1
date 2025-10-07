@@ -50,3 +50,33 @@ print(SA)
 expected = [10, 7, 4, 1, 0, 9, 8, 6, 3, 5, 2]
 print("Esperado: ", expected)
 print("¿Correcto?:", SA == expected)
+
+# IMPLEMENTACIÓN DE BWT Y FM-INDEX PARA BÚSQUEDA
+
+def build_bwt(text, suffix_array):
+    n = len(text)
+    bwt = []
+    for i in range(n):
+        #caracter  BWT
+        pos = suffix_array[i] - 1
+        bwt_char = text[pos] if pos >= 0 else text[-1]
+        bwt.append(bwt_char)
+    return ''.join(bwt)
+
+def build_fm_index(bwt):
+    first_col = sorted(bwt)
+    #tabla de ocurrencias y conteos 
+    chars = sorted(set(bwt))
+    occ_table = {char: [0] * (len(bwt) + 1) for char in chars}
+    c_table = {char: 0 for char in chars}
+    
+    #tabla de ocurrencias 
+    for i, char in enumerate(bwt):
+        for c in chars:
+            occ_table[c][i + 1] = occ_table[c][i] + (1 if bwt[i] == c else 0)
+    #cuántos caracteres son menores que cada char
+    total = 0
+    for char in chars:
+        c_table[char] = total
+        total += occ_table[char][len(bwt)]
+    return first_col, occ_table, c_table

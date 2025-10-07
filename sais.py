@@ -14,7 +14,7 @@ def getBuckets(T):
     return buckets
 
 
-def place_LMS(SA, LMS, count, buckets, T, t):
+def place_LMS(SA, LMS, count, buckets, T, t): #Función para colocar LMS
     end = None
     for i in range(len(T) - 1, 0, -1):
         if t[i] == "S" and t[i - 1] == "L":

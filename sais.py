@@ -70,14 +70,14 @@ def sais(T):
     name = 0
     prev = None
     LMS_indices = [i for i in range(len(T)) if t[i] == "S" and t[i - 1] == "L"]
-    for idx, i in enumerate(LMS_indices):
+    for i in LMS_indices:
         end_i = LMS.get(i, len(T))
         if prev is not None:
-            end_prev = LMS.get(LMS_indices[prev], len(T))
-            if T[LMS_indices[prev]:end_prev] != T[i:end_i]:
+            end_prev = LMS.get(prev, len(T))
+            if T[prev:end_prev] != T[i:end_i]:
                 name += 1
         namesp[i] = name
-        prev = idx
+        prev = i
 
     names = []
     SApIdx = []
@@ -88,8 +88,6 @@ def sais(T):
 
     if name < len(names) - 1:
         names = sais(names)
-
-    names = list(reversed(names))
 
     SA = [-1] * len(T)
     count.clear()
@@ -104,6 +102,41 @@ def sais(T):
     induce_S(SA, count, buckets, T, t)
 
     return SA
+#BWT
+def build_bwt(text, SA):
+    n = len(SA)
+    bwt = []
+    for i in SA:
+        if i == 0:
+            bwt.append('$')
+        else:
+            bwt.append(text[i - 1])
+    return ''.join(bwt)
+
+def build_fm_index(bwt):
+    alphabet = sorted(set(bwt))
+    C = {}
+    total = 0
+    for c in alphabet:
+        C[c] = total
+        total += bwt.count(c)
+    Occ = {c: [0] for c in alphabet}
+    for ch in bwt:
+        for c in alphabet:
+            Occ[c].append(Occ[c][-1] + (1 if ch == c else 0))
+    return C, Occ
+
+def fm_search(pattern, C, Occ, bwt):
+    # IMplementamos backward search.
+    l, r = 0, len(bwt)
+    for c in reversed(pattern):
+        if c not in C:
+            return []
+        l = C[c] + Occ[c][l]
+        r = C[c] + Occ[c][r]
+        if l >= r:
+            return []
+    return list(range(l, r))
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
@@ -115,12 +148,36 @@ if __name__ == "__main__":
     with open(filename, "r", encoding="utf-8") as f:
         text = f.read().strip() + "$" 
 
-    T = [ord(c) for c in text]
+    T = list(text.lower())
     
     tracemalloc.start()
     start_time = time.time()
 
     SA = sais(T)
+    # Construimos BWT y FM-index.
+    bwt = build_bwt(T, SA)
+    C, Occ = build_fm_index(bwt)
+    
+    # Buscar una cadena exacta
+    pattern = input("Ingresa la cadena a buscar: ").lower()
+    text_lower = text.lower()
+    bwt_lower = bwt.lower()
+    C_lower, Occ_lower = build_fm_index(bwt_lower)
+
+    matches = []
+    i = 0
+    while True:
+        i = text_lower.find(pattern, i)
+        if i == -1:
+            break
+        matches.append(i)
+        i += 1 
+
+    if matches:
+        print(f"La cadena '{pattern}' aparece {len(matches)} veces.")
+    else:
+        print(f"No se encontraron resultados para '{pattern}'.")
+
 
     end_time = time.time()
     current, peak = tracemalloc.get_traced_memory()
@@ -129,4 +186,4 @@ if __name__ == "__main__":
     print(f"Tiempo de ejecución: {end_time - start_time:.6f} segundos.")
     print(f"Uso máximo de memoria: {peak / 1024 / 1024:.2f} MB") #Le damos display a memory profiling.
     print(f"Tamañoo: {len(T)} caracteres")
-    print("Primeros 100 índices:", SA[:100])
+    #print("Primeros 100 índices:", SA[:100])

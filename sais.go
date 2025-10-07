@@ -32,21 +32,17 @@ func getBuckets(T []int) map[int][2]int {
 
 // Función sais para crear el suffix array
 func sais(T []int) []int {
-	t := make([]byte, len(T))
-	for i := range t {
-		t[i] = '_'
-	}
-
-	t[len(T)-1] = 'S'
+	isS := make([]bool, len(T)) //Arreglo bool
+	isS[len(T)-1] = true        //El último carácter siempre es "S"
 
 	// Identificamos la posición como "S" o "L"
 	for i := (len(T) - 1); i > 0; i-- {
-		if T[i-1] == T[i] {
-			t[i-1] = t[i]
-		} else if T[i-1] < T[i] {
-			t[i-1] = 'S'
+		if T[i-1] < T[i] {
+			isS[i-1] = true
+		} else if T[i-1] == T[i] && isS[i] {
+			isS[i-1] = true //true es "S" y false es "L"
 		} else {
-			t[i-1] = 'L'
+			isS[i-1] = false
 		}
 	}
 
@@ -62,7 +58,7 @@ func sais(T []int) []int {
 
 	// Colocamos los substrings LMS
 	for i := (len(T) - 1); i > 0; i-- {
-		if t[i] == 'S' && t[i-1] == 'L' {
+		if isS[i] && !isS[i-1] {
 			count[T[i]]++
 			revoffset := count[T[i]]
 			pos := buckets[T[i]][1] - revoffset
@@ -81,7 +77,7 @@ func sais(T []int) []int {
 	// Hacemos el sort para "L"
 	count = make(map[int]int)
 	for i := 0; i < len(T); i++ {
-		if SA[i] > 0 && SA[i] < len(T) && SA[i]-1 >= 0 && t[SA[i]-1] == 'L' { //Posición válida
+		if SA[i] > 0 && SA[i]-1 >= 0 && !isS[SA[i]-1] { //Posición válida
 			symbol := T[SA[i]-1]
 			offset := count[symbol]
 			pos := buckets[symbol][0] + offset
@@ -95,115 +91,7 @@ func sais(T []int) []int {
 	// Hacemos el sort para "S"
 	count = make(map[int]int)
 	for i := len(T) - 1; i > 0; i-- {
-		if SA[i] > 0 && SA[i] < len(T) && SA[i]-1 >= 0 && t[SA[i]-1] == 'S' { //Posiciones válidas en SA
-			symbol := T[SA[i]-1]
-			count[symbol]++
-			revoffset := count[symbol]
-			pos := buckets[symbol][1] - revoffset
-			if pos >= 0 {
-				SA[pos] = SA[i] - 1
-			}
-		}
-	}
-
-	// Nombres
-	namesp := make([]int, len(T))
-	for i := range namesp {
-		namesp[i] = -1
-	}
-	name := 0
-	var prev *int
-	for i := 0; i < len(T); i++ {
-		if SA[i] <= 0 || SA[i] >= len(T) {
-			continue
-		}
-		if _, ok := LMS[SA[i]]; !ok {
-			continue
-		}
-		if prev != nil && *prev >= 0 && *prev < len(T) {
-			prevEnd, currEnd := LMS[*prev], LMS[SA[i]]
-			if prevEnd > len(T) || currEnd > len(T) {
-				continue
-			}
-			previous := T[*prev:prevEnd]
-			current := T[SA[i]:currEnd]
-			equal := len(previous) == len(current)
-			if equal {
-				for j := range previous {
-					if previous[j] != current[j] {
-						equal = false
-						break
-					}
-				}
-			}
-			if !equal {
-				name++
-			}
-		}
-		tmp := SA[i]
-		prev = &tmp
-		namesp[SA[i]] = name
-	}
-
-	names := make([]int, 0)
-	SApIdx := make([]int, 0)
-	for i := 0; i < len(T); i++ {
-		if namesp[i] != -1 {
-			names = append(names, namesp[i])
-			SApIdx = append(SApIdx, i)
-		}
-	}
-
-	if len(names) > 0 && name < len(names)-1 {
-		names = sais(names)
-	}
-
-	//Revertimos los nombres
-	for i, j := 0, len(names)-1; i < j; i, j = i+1, j-1 {
-		names[i], names[j] = names[j], names[i]
-	}
-
-	//Sort final.
-	SA = make([]int, len(T))
-	for i := range SA {
-		SA[i] = -1
-	}
-	count = make(map[int]int)
-
-	for i := 0; i < len(names); i++ {
-		if names[i] < 0 || names[i] >= len(SApIdx) {
-			continue
-		}
-		pos := SApIdx[names[i]]
-		if pos < 0 || pos >= len(T) {
-			continue
-		}
-		count[T[pos]]++
-		revoffset := count[T[pos]]
-		idx := buckets[T[pos]][1] - revoffset
-		if idx >= 0 && idx < len(T) {
-			SA[idx] = pos
-		}
-	}
-
-	//Inducción para "L"
-	count = make(map[int]int)
-	for i := 0; i < len(T); i++ {
-		if SA[i] >= 0 && SA[i]-1 >= 0 && SA[i] < len(T) && SA[i]-1 >= 0 && t[SA[i]-1] == 'L' {
-			symbol := T[SA[i]-1]
-			offset := count[symbol]
-			pos := buckets[symbol][0] + offset
-			if pos < len(T) {
-				SA[pos] = SA[i] - 1
-			}
-			count[symbol]++
-		}
-	}
-
-	// Inducción para "S"
-	count = make(map[int]int)
-	for i := len(T) - 1; i > 0; i-- {
-		if SA[i] > 0 && SA[i] < len(T) && SA[i]-1 >= 0 && t[SA[i]-1] == 'S' {
+		if SA[i] > 0 && SA[i]-1 >= 0 && isS[SA[i]-1] { //Posiciones válidas en SA
 			symbol := T[SA[i]-1]
 			count[symbol]++
 			revoffset := count[symbol]
